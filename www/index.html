@@ -863,7 +863,7 @@ function obTotal(){return S.prof.people.length+4}
 function viewOnb(){
   const p=S.prof,n=p.people.length,total=obTotal();if(ob>=total)ob=total-1;
   const pct=Math.round((ob+1)/total*100),opt=(v,l,c)=>`<option value="${v}" ${String(v)===String(c)?'selected':''}>${l}</option>`;
-  let h=`<div class="stack"><div class="stack" style="gap:6px"><div class="row between"><span class="eyebrow">Étape ${ob+1} sur ${total}</span>${S.onboarded?`<button class="linkbtn small" data-act="obclose">Quitter</button>`:''}</div><div class="meter" role="img" aria-label="Étape ${ob+1} sur ${total}"><i style="width:${pct}%"></i></div></div>`;
+  let h=`<div class="stack"><div class="stack" style="gap:6px"><div class="row between"><span class="eyebrow">Étape ${ob+1} sur ${total}</span><button class="linkbtn small" data-act="obclose">${S.onboarded?'Quitter':'Passer le questionnaire'}</button></div><div class="meter" role="img" aria-label="Étape ${ob+1} sur ${total}"><i style="width:${pct}%"></i></div></div>`;
   let nextLabel='Suivant';
   if(ob===0){
     h+=`<section class="card stack"><h2 class="ob-h">Qui mange à la maison ?</h2><p class="muted">Chaque personne aura son propre régime et son propre appétit, avec une seule liste de courses.</p>
@@ -1351,7 +1351,7 @@ const ACT={
  onbstart(){ob=0;editP=0;tab='onb';render();window.scrollTo(0,0)},
  obnext(){ob=Math.min(obTotal()-1,ob+1);render();window.scrollTo(0,0)},
  obprev(){ob=Math.max(0,ob-1);render();window.scrollTo(0,0)},
- obclose(){tab='home';render()},
+ obclose(){S.onboarded=true;editP=0;tab='home';stale();commit();window.scrollTo(0,0)},
  obpers(el){const p=S.prof,d=Number(el.dataset.n);if(d>0&&p.people.length<8)p.people.push(newPerson('Personne '+(p.people.length+1)));else if(d<0&&p.people.length>1)p.people.pop();stale();commit()},
  obdone(el){S.onboarded=true;editP=0;tab='home';if(el.dataset.gen){generate(S.week);toast('Semaine composée')}else stale();commit();window.scrollTo(0,0)},
  tab(el){tab=el.dataset.t;if(tab==='home')S.week=mondayOf(iso(new Date()));render();window.scrollTo(0,0)},

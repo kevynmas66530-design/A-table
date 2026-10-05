@@ -3,5 +3,14 @@
   "appName": "À table",
   "webDir": "www",
   "backgroundColor": "#F2F5F1",
-  "android": { "allowMixedContent": false }
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#F2F5F1",
+      "overlaysWebView": false
+    }
+  }
 }
