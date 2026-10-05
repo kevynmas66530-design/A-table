@@ -204,6 +204,22 @@ body.cooking:has(#timers:not([hidden])) .ck-top{margin-bottom:62px}
 label.btn input[hidden]{display:none}
 .ob-h{margin:0;font:800 24px/1.15 var(--f-display);text-wrap:balance}
 
+.welcome{position:fixed;inset:0;z-index:15;display:flex;flex-direction:column;background:#1f7a62}
+.cloth{position:relative;flex:1 1 52%;min-height:0;overflow:hidden;background-color:#237f66;background-image:linear-gradient(90deg,rgba(255,255,255,.17) 50%,transparent 50%),linear-gradient(rgba(255,255,255,.17) 50%,transparent 50%);background-size:44px 44px;padding-top:env(safe-area-inset-top,0px)}
+.cloth::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 0%,transparent 55%,rgba(0,0,0,.22))}
+.wplate,.cutlery{position:absolute;transform:rotate(var(--r,0deg));filter:drop-shadow(0 10px 12px rgba(0,0,0,.28));z-index:1}
+.wplate svg{display:block;width:100%;height:auto}
+.cutlery{width:7%;height:auto}
+.wpanel{position:relative;z-index:2;margin-top:-26px;background:var(--surface);border-radius:28px 28px 0 0;padding:26px 24px calc(22px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;box-shadow:0 -10px 30px rgba(0,0,0,.18)}
+.wtitle{margin:0;font:800 clamp(60px,19vw,92px)/.88 var(--f-display);letter-spacing:-.035em;color:var(--ink)}
+.wtext{margin:0;font-size:17px;line-height:1.4;max-width:30ch;color:var(--ink)}
+.wbtn{min-height:56px;font-size:18px;border-radius:14px}
+@media(min-width:720px){.welcome{flex-direction:row}.cloth{flex:1 1 55%}.wpanel{margin:0;border-radius:0;justify-content:center;flex:1 1 45%;padding:48px}}
+@media(prefers-reduced-motion:no-preference){
+ .wplate,.cutlery{animation:wdrop .7s cubic-bezier(.2,.8,.25,1) both;animation-delay:var(--d,0ms)}
+ @keyframes wdrop{from{opacity:0;transform:translateY(-36px) rotate(calc(var(--r,0deg) - 12deg)) scale(1.08)}to{opacity:1;transform:rotate(var(--r,0deg))}}
+}
+
 .shell{padding-top:calc(14px + env(safe-area-inset-top,0px))}
 </style>
 </head>
@@ -782,9 +798,10 @@ function render(){
     :tab==='home'?`<h1 style="text-transform:capitalize">${esc(parse(iso(new Date())).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}))}</h1>${profBtn}`
     :tab==='onb'?`<h1>${S.onboarded?'Mon profil':'Bienvenue'}</h1>`
     :`<h1>${TITLES[tab]}</h1>${tab==='me'?'':profBtn}`;
-  const navEl=$('nav.tabs');if(navEl)navEl.hidden=tab==='onb';
+  const navEl=$('nav.tabs');if(navEl)navEl.hidden=tab==='onb'||tab==='welcome';
+  const hd=$('header.top');if(hd)hd.hidden=tab==='welcome';
   $('#tabs').innerHTML=[['home','Accueil','home'],['week','Semaine','week'],['recipes','Recettes','book'],['shop','Courses','cart'],['track','Suivi','track']].map(([k,l,ic])=>`<button class="tab" data-act="tab" data-t="${k}" ${tab===k?'aria-current="page"':''}>${ICON[ic]}<span>${l}</span></button>`).join('');
-  $('#view').innerHTML={onb:viewOnb,home:viewHome,week:viewWeek,recipes:viewRecipes,shop:viewShop,me:viewMe,track:viewTrack}[tab]();
+  $('#view').innerHTML={welcome:viewWelcome,onb:viewOnb,home:viewHome,week:viewWeek,recipes:viewRecipes,shop:viewShop,me:viewMe,track:viewTrack}[tab]();
   if(tab==='recipes')paintRecipeList();
   if(tab==='me')paintSync();
 }
@@ -859,6 +876,17 @@ function viewWeek(){
 }
 
 
+
+function viewWelcome(){
+  const pick=n=>RECIPES.find(r=>r.name.startsWith(n))||RECIPES[0];
+  const plates=[['Saumon, pommes de terre',-9,3,52,-14],['Pâtes aux épinards',50,-2,50,11],['Bowl pois chiches',6,40,50,8],['Omelette aux champignons',52,38,46,-9]];
+  return`<div class="welcome"><div class="cloth" aria-hidden="true">
+    ${plates.map(([n,x,y,sz,rot],i)=>`<div class="wplate" style="left:${x}%;top:${y}%;width:${sz}%;--r:${rot}deg;--d:${i*110}ms">${plateSvg(pick(n))}</div>`).join('')}
+    <svg class="cutlery" style="left:41%;top:20%;--r:8deg" viewBox="0 0 20 120"><rect x="8" y="40" width="4" height="78" rx="2" fill="#e9e6dc"/><path d="M3 4h2v34a1 1 0 0 0 2 0V4h2v34a1 1 0 0 0 2 0V4h2v34a1 1 0 0 0 2 0V4h2v36a6 6 0 0 1-12 0z" fill="#e9e6dc" transform="translate(-1 0)"/></svg>
+    <svg class="cutlery" style="left:46%;top:56%;--r:-6deg;--d:420ms" viewBox="0 0 20 120"><rect x="8" y="42" width="4" height="76" rx="2" fill="#e9e6dc"/><path d="M10 2c5 0 7 10 7 22 0 9-3 16-7 16z" fill="#e9e6dc"/></svg>
+  </div>
+  <div class="wpanel"><h1 class="wtitle">À table !</h1><p class="wtext">Tes menus de la semaine, la liste de courses et le budget, prêts en deux minutes.</p><button class="btn primary wbtn" data-act="wstart">Commencer</button><p class="small muted" style="margin:0;text-align:center">Quelques questions pour s’adapter à toi. Tu pourras tout modifier ensuite.</p></div></div>`;
+}
 function obTotal(){return S.prof.people.length+4}
 function viewOnb(){
   const p=S.prof,n=p.people.length,total=obTotal();if(ob>=total)ob=total-1;
@@ -1348,6 +1376,7 @@ function favsSheet(){
     return`<div class="card stack" style="gap:8px"><div class="row between"><b>${esc(f.name)}</b><span class="small muted num">≈ ${eur(c)}</span></div><div class="row"><button class="btn small primary" data-act="favuse" data-id="${f.id}">Reprendre</button><button class="btn small danger" data-act="favdel" data-id="${f.id}">Supprimer</button></div></div>`}).join('')}</div>`);
 }
 const ACT={
+ wstart(){S.welcomed=true;ob=0;editP=0;tab='onb';render();window.scrollTo(0,0)},
  onbstart(){ob=0;editP=0;tab='onb';render();window.scrollTo(0,0)},
  obnext(){ob=Math.min(obTotal()-1,ob+1);render();window.scrollTo(0,0)},
  obprev(){ob=Math.max(0,ob-1);render();window.scrollTo(0,0)},
@@ -1510,7 +1539,7 @@ async function boot(){
   await connect();
   const firstVisit=!S;
   if(!S){S=defaults();S.savedAt=Date.now();rebuild();writeLocal()}
-  if(!S.onboarded){tab='onb';ob=0}
+  if(!S.onboarded){tab='welcome';ob=0}
   const nowWeek=mondayOf(iso(new Date()));
   if(nowWeek>S.week&&!S.plans[S.week])S.week=nowWeek;
   rebuild();booted=true;render();if(!firstVisit)flush();
