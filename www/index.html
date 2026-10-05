@@ -202,7 +202,7 @@ body.cooking:has(#timers:not([hidden])) .ck-top{margin-bottom:62px}
 .hero svg{width:190px;height:190px}
 .hero img.big{width:100%;height:100%;object-fit:cover;border-radius:0}
 label.btn input[hidden]{display:none}
-</style>
+
 .shell{padding-top:calc(14px + env(safe-area-inset-top,0px))}
 </style>
 </head>
@@ -1454,7 +1454,7 @@ async function boot(){
   if(local){S=normalize(local);S.savedAt=local.savedAt||0;rebuild();render()}
   await connect();
   const firstVisit=!S;
-  if(!S){S=defaults();rebuild();tab='me'}
+  if(!S){S=defaults();S.savedAt=Date.now();rebuild();writeLocal()}
   const nowWeek=mondayOf(iso(new Date()));
   if(nowWeek>S.week&&!S.plans[S.week])S.week=nowWeek;
   rebuild();booted=true;render();if(!firstVisit)flush();
