@@ -202,6 +202,7 @@ body.cooking:has(#timers:not([hidden])) .ck-top{margin-bottom:62px}
 .hero svg{width:190px;height:190px}
 .hero img.big{width:100%;height:100%;object-fit:cover;border-radius:0}
 label.btn input[hidden]{display:none}
+.ob-h{margin:0;font:800 24px/1.15 var(--f-display);text-wrap:balance}
 
 .shell{padding-top:calc(14px + env(safe-area-inset-top,0px))}
 </style>
@@ -478,8 +479,8 @@ let pidN=0;
 const newPerson=(name,o)=>({id:'p'+Date.now().toString(36)+(pidN++),name,diet:'balanced',gf:false,lf:false,excl:[],appetite:'normal',dukan:newDukan(),goal:null,...o});
 const defaults=()=>({v:2,savedAt:0,week:mondayOf(iso(new Date())),
   prof:{meals:{b:true,l:true,d:true,s:false},maxTime:60,budget:100,leftovers:true,people:[newPerson('Moi')]},
-  plans:{},pantry:[],prices:{},custom:[],track:{},favs:[],rate:{},stock:{},spend:{},photos:{},cal:false});
-let S=null,RECIPES=[],BYID={},NUT=new Map(),tab='home',sync='local',recQuery='',recType='all',recOnlyOk=true,draft=null,saveT=null,writing=false,dirtyAgain=false,docRef=null,booted=false,editP=0,trackP=null,trackMetric='w',sampleFn=null,ai=null,recFav=false,recPantry=false,cook=null,wl=null,curDetail=null,assetsFn=null,_cf=null,calOff=false;
+  plans:{},pantry:[],prices:{},custom:[],track:{},favs:[],rate:{},stock:{},spend:{},photos:{},cal:false,onboarded:false});
+let S=null,RECIPES=[],BYID={},NUT=new Map(),tab='home',sync='local',recQuery='',recType='all',recOnlyOk=true,draft=null,saveT=null,writing=false,dirtyAgain=false,docRef=null,booted=false,editP=0,trackP=null,trackMetric='w',sampleFn=null,ai=null,ob=0,recFav=false,recPantry=false,cook=null,wl=null,curDetail=null,assetsFn=null,_cf=null,calOff=false;
 function rebuild(){_cf=null;RECIPES=[...B,...S.custom];BYID=Object.fromEntries(RECIPES.map(r=>[r.id,r]));NUT=new Map()}
 function nut(r){let n=NUT.get(r.id);if(n)return n;n={k:0,p:0,c:0,f:0};for(const[key,q]of r.items){const i=I[key];if(!i)continue;const g=i.u==='pc'?q*i.pg:q;n.k+=g*i.k/100;n.p+=g*i.p/100;n.c+=g*i.c/100;n.f+=g*i.f/100}NUT.set(r.id,n);return n}
 const P=new Set(['poulet','dinde','boeuf','jambon','saumon','cabillaud','colin','crevette','thon','sardine','oeuf','fromage_blanc','yaourt','tofu','son','citron','surimi','moule']);
@@ -749,7 +750,7 @@ function normalize(s){
   const rt={};if(s.rate&&typeof s.rate==='object')for(const k in s.rate)if(s.rate[k]===1||s.rate[k]===-1)rt[k]=s.rate[k];s.rate=rt;
   const stk={};if(s.stock&&typeof s.stock==='object')for(const k in s.stock)if(I[k]&&s.stock[k]>0)stk[k]=Number(s.stock[k]);s.stock=stk;
   const sp={};if(s.spend&&typeof s.spend==='object')for(const k in s.spend){const x=s.spend[k];if(x&&x.real>0&&x.est>0)sp[k]={est:Number(x.est),real:Number(x.real)}}s.spend=sp;
-  const ph={};if(s.photos&&typeof s.photos==='object')for(const k in s.photos)if(/^[0-9a-f]{32}$/.test(s.photos[k]))ph[k]=s.photos[k];s.photos=ph;s.cal=!!s.cal;
+  const ph={};if(s.photos&&typeof s.photos==='object')for(const k in s.photos)if(/^[0-9a-f]{32}$/.test(s.photos[k]))ph[k]=s.photos[k];s.photos=ph;s.cal=!!s.cal;s.onboarded=s.onboarded===true;
   s.favs=(Array.isArray(s.favs)?s.favs:[]).filter(f=>f&&f.id&&Array.isArray(f.entries)).slice(0,20);
   return s;
 }
@@ -779,9 +780,11 @@ function render(){
   $('#weeknav').innerHTML=tab==='week'||tab==='shop'
     ?`<button class="icon-btn" data-act="wk" data-n="-1" aria-label="Semaine précédente">${ICON.prev}</button><h1>${esc(range)}</h1><button class="icon-btn" data-act="wk" data-n="1" aria-label="Semaine suivante">${ICON.next}</button>${profBtn}`
     :tab==='home'?`<h1 style="text-transform:capitalize">${esc(parse(iso(new Date())).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}))}</h1>${profBtn}`
+    :tab==='onb'?`<h1>${S.onboarded?'Mon profil':'Bienvenue'}</h1>`
     :`<h1>${TITLES[tab]}</h1>${tab==='me'?'':profBtn}`;
+  const navEl=$('nav.tabs');if(navEl)navEl.hidden=tab==='onb';
   $('#tabs').innerHTML=[['home','Accueil','home'],['week','Semaine','week'],['recipes','Recettes','book'],['shop','Courses','cart'],['track','Suivi','track']].map(([k,l,ic])=>`<button class="tab" data-act="tab" data-t="${k}" ${tab===k?'aria-current="page"':''}>${ICON[ic]}<span>${l}</span></button>`).join('');
-  $('#view').innerHTML={home:viewHome,week:viewWeek,recipes:viewRecipes,shop:viewShop,me:viewMe,track:viewTrack}[tab]();
+  $('#view').innerHTML={onb:viewOnb,home:viewHome,week:viewWeek,recipes:viewRecipes,shop:viewShop,me:viewMe,track:viewTrack}[tab]();
   if(tab==='recipes')paintRecipeList();
   if(tab==='me')paintSync();
 }
@@ -855,6 +858,48 @@ function viewWeek(){
   return h+`</div></div>`;
 }
 
+
+function obTotal(){return S.prof.people.length+4}
+function viewOnb(){
+  const p=S.prof,n=p.people.length,total=obTotal();if(ob>=total)ob=total-1;
+  const pct=Math.round((ob+1)/total*100),opt=(v,l,c)=>`<option value="${v}" ${String(v)===String(c)?'selected':''}>${l}</option>`;
+  let h=`<div class="stack"><div class="stack" style="gap:6px"><div class="row between"><span class="eyebrow">Étape ${ob+1} sur ${total}</span>${S.onboarded?`<button class="linkbtn small" data-act="obclose">Quitter</button>`:''}</div><div class="meter" role="img" aria-label="Étape ${ob+1} sur ${total}"><i style="width:${pct}%"></i></div></div>`;
+  let nextLabel='Suivant';
+  if(ob===0){
+    h+=`<section class="card stack"><h2 class="ob-h">Qui mange à la maison ?</h2><p class="muted">Chaque personne aura son propre régime et son propre appétit, avec une seule liste de courses.</p>
+    <div class="row between"><b>Nombre de personnes</b><div class="stepper"><button class="icon-btn" data-act="obpers" data-n="-1" aria-label="Moins">−</button><output aria-live="polite">${n}</output><button class="icon-btn" data-act="obpers" data-n="1" aria-label="Plus">+</button></div></div>
+    ${p.people.map((x,i)=>`<label class="f">Prénom de la personne ${i+1}<input type="text" id="obn-${i}" maxlength="24" value="${esc(x.name)}"></label>`).join('')}</section>`;
+  }else if(ob<=n){
+    editP=ob-1;const pe=p.people[editP],gr=[['Viande','m'],['Poisson','f'],['Produits laitiers','d'],['Œufs','e']],groupOn=fl=>Object.keys(I).filter(k=>I[k].fl.includes(fl)).every(k=>pe.excl.includes(k));
+    h+=`<section class="card stack"><h2 class="ob-h">${n>1?'Pour '+esc(pe.name):'Ton alimentation'}</h2>
+    <label class="f">Régime<select id="diet">${Object.entries(DIETS).map(([k,l])=>opt(k,l,pe.diet)).join('')}</select></label>
+    ${pe.diet==='dukan'?dukanUI(pe):''}
+    <label class="f">Appétit<select id="appetite">${Object.entries(APPETITE).map(([k,v])=>opt(k,v.l+(v.m>1?' (+'+Math.round((v.m-1)*100)+' %)':' (portions de base)'),pe.appetite)).join('')}</select></label>
+    <p class="small muted">Les portions de base sont plutôt petites : choisis « Normal » ou « Copieux » si tu manges à ta faim.</p>
+    <div class="grid2"><label class="check"><input type="checkbox" id="gf" ${pe.gf?'checked':''}>Sans gluten</label><label class="check"><input type="checkbox" id="lf" ${pe.lf?'checked':''}>Sans lactose</label></div>
+    <span class="eyebrow">Aliments à éviter</span><div class="chips">${gr.map(([l,f])=>`<button class="chip x" data-act="exg" data-f="${f}" aria-pressed="${groupOn(f)}">${l}</button>`).join('')}</div>
+    <p class="small muted">Tu pourras éviter des ingrédients précis plus tard, dans Profils.</p></section>`;
+  }else if(ob===n+1){
+    h+=`<section class="card stack"><h2 class="ob-h">Budget et temps</h2>
+    <label class="f">Budget courses par semaine (€)<input type="number" id="budget" min="10" max="2000" step="5" value="${p.budget}" inputmode="numeric"><span class="small muted" style="font-weight:400">≈ ${nf(p.budget/n/7,2)} € par personne et par jour</span></label>
+    <label class="f">Temps maximum par recette<select id="maxTime">${[15,30,45,60,120].map(t=>opt(t,t+' minutes',p.maxTime)).join('')}</select></label>
+    <p class="small muted">Si le budget est trop juste, l’appli te proposera des solutions : retirer un repas, éviter les ingrédients chers, etc.</p></section>`;
+  }else if(ob===n+2){
+    h+=`<section class="card stack"><h2 class="ob-h">Quels repas planifier ?</h2><div class="grid2">${SLOT_ORDER.map(m=>`<label class="check"><input type="checkbox" data-meal="${m}" ${p.meals[m]?'checked':''}>${SLOTS[m]}</label>`).join('')}</div>
+    <label class="check"><input type="checkbox" id="leftovers" ${p.leftovers&&!anyDukan(p)?'checked':''} ${anyDukan(p)?'disabled':''}>Cuisiner en double le soir pour le déjeuner du lendemain (un jour sur deux)${anyDukan(p)?' · indisponible avec le Dukan':''}</label></section>`;
+  }else{
+    nextLabel='';
+    const has=curPlan()&&curPlan().entries.length;
+    h+=`<section class="card stack"><h2 class="ob-h">C’est tout bon ?</h2>
+    ${p.people.map(x=>`<div><b>${esc(x.name)}</b> · ${DIETS[x.diet]} · appétit ${APPETITE[x.appetite].l.toLowerCase()}${x.gf?' · sans gluten':''}${x.lf?' · sans lactose':''}${x.excl.length?` · évite ${x.excl.length} aliment${x.excl.length>1?'s':''}`:''}</div>`).join('')}
+    <div>Budget : <b>${eur(p.budget)}</b> par semaine · recettes de ${p.maxTime} minutes maximum</div>
+    <div>Repas : ${SLOT_ORDER.filter(m=>p.meals[m]).map(m=>SLOTS[m].toLowerCase()).join(', ')}</div>
+    <p class="small muted">Tu pourras tout modifier dans Profils.</p></section>
+    <button class="btn primary" data-act="obdone" data-gen="1" style="min-height:52px">${has?'Recomposer ma semaine':'Composer ma semaine'}</button>${has?`<button class="btn" data-act="obdone">Garder mes menus actuels</button>`:''}`;
+  }
+  h+=`<div class="ck-nav" style="grid-template-columns:1fr 2fr">${ob>0?`<button class="btn" data-act="obprev">Retour</button>`:'<span></span>'}${nextLabel?`<button class="btn primary" data-act="obnext">${nextLabel}</button>`:'<span></span>'}</div></div>`;
+  return h;
+}
 function viewHome(){
   const today=iso(new Date()),wk=mondayOf(today),p=S.prof,plan=S.plans[wk],di=dayDiff(today,wk);
   let h=`<div class="stack">`;
@@ -870,6 +915,7 @@ function viewHome(){
   if(tom.length)h+=`<section class="card stack" style="gap:6px"><span class="eyebrow">Demain</span>${tom.map(x=>`<div class="small"><b>${SLOTS[x.e.m]}</b> · ${esc(BYID[x.e.r].name)}${x.e.lo?' <span class="muted">(reste de la veille)</span>':''}</div>`).join('')}</section>`;
   const gs=groceries(plan).filter(g=>!g.home),got=new Set(plan.got||[]),left=gs.filter(g=>!got.has(g.k)).length;
   h+=`<section class="card stack" style="gap:10px"><div class="row between"><div><span class="eyebrow">Courses de la semaine</span><div class="big" style="font-size:30px">${eur(cost)}</div></div><div class="small muted" style="text-align:right">sur ${eur(b)}<br>${left?`${left} article${left>1?'s':''} à prendre`:'tout est pris ✓'}</div></div><div class="meter ${cls}" role="img" aria-label="${Math.round(ratio*100)} % du budget"><i style="width:${Math.min(100,ratio*100)}%"></i></div>
+  ${cost>b+.001?`<div class="notice bad" style="padding:10px 12px">Budget dépassé de ${eur(cost-b)}. <button class="linkbtn" data-act="tab" data-t="week">Voir les solutions</button></div>`:''}
   <div class="row"><button class="btn small" data-act="tab" data-t="shop">Voir la liste</button><button class="btn small" data-act="prep">Préparer d’avance</button><button class="btn small" data-act="tab" data-t="week">Toute la semaine</button></div></section>`;
   const dk=p.people.filter(x=>x.diet==='dukan');
   if(dk.length)h+=dk.map(pe=>`<section class="card stack" style="gap:6px;border-color:var(--accent)"><span class="eyebrow">Dukan · ${esc(pe.name)}</span><div><b>${esc(dukanToday(pe))}</b></div><button class="btn small" data-act="tpick" data-id="${pe.id}" data-go="track" style="align-self:flex-start">Noter une pesée</button></section>`).join('');
@@ -938,6 +984,7 @@ function viewMe(){
   <details><summary>Choisir ingrédient par ingrédient (${pe.excl.length} évité${pe.excl.length>1?'s':''})</summary><div class="chips" style="margin-top:8px">${Object.keys(I).sort((a,b)=>I[a].n.localeCompare(I[b].n,'fr')).map(k=>`<button class="chip x" data-act="ex" data-k="${k}" aria-pressed="${pe.excl.includes(k)}">${esc(I[k].n)}</button>`).join('')}</div></details>
   ${n>1?`<div><button class="btn danger small" data-act="delp">Retirer ${esc(pe.name)}</button></div>`:''}
   ${n>1?`<p class="small muted">Quand un plat ne convient pas à quelqu’un, cette personne reçoit une autre recette pour ce repas ; les courses restent regroupées.</p>`:''}</section>
+  <button class="btn" data-act="onbstart">Refaire le questionnaire pas à pas</button>
   <button class="btn primary" data-act="genme">${curPlan()&&curPlan().entries.length?'Recomposer la semaine avec ces profils':'Composer ma semaine'}</button>
   <section class="card stack"><span class="eyebrow">Sauvegarde</span><p class="small muted" id="syncline"></p>
   <div class="row"><button class="btn" data-act="export">Copier la sauvegarde</button><button class="btn" data-act="importform">Restaurer…</button></div>
@@ -1291,6 +1338,7 @@ function listText(){
   for(const a of AISLES){const rows=gs.filter(g=>I[g.k].a===a);if(!rows.length)continue;out.push('',a.toUpperCase());rows.forEach(g=>out.push(`- ${I[g.k].n} : ${packText(g)}`))}
   out.push('',`Total estimé : ${eur(gTotal(gs))}`);return out.join('\n');
 }
+const quiet=()=>{S.savedAt=Date.now();clearTimeout(saveT);saveT=setTimeout(flush,600)};
 function stale(){const p=curPlan();if(p&&p.entries.length){p.stale=true;p.tipsDone=false;p.tips=[]}}
 const arm=(el,t)=>{if(el.dataset.sure)return true;el.dataset.sure='1';el.textContent=t;return false};
 function favsSheet(){
@@ -1300,6 +1348,12 @@ function favsSheet(){
     return`<div class="card stack" style="gap:8px"><div class="row between"><b>${esc(f.name)}</b><span class="small muted num">≈ ${eur(c)}</span></div><div class="row"><button class="btn small primary" data-act="favuse" data-id="${f.id}">Reprendre</button><button class="btn small danger" data-act="favdel" data-id="${f.id}">Supprimer</button></div></div>`}).join('')}</div>`);
 }
 const ACT={
+ onbstart(){ob=0;editP=0;tab='onb';render();window.scrollTo(0,0)},
+ obnext(){ob=Math.min(obTotal()-1,ob+1);render();window.scrollTo(0,0)},
+ obprev(){ob=Math.max(0,ob-1);render();window.scrollTo(0,0)},
+ obclose(){tab='home';render()},
+ obpers(el){const p=S.prof,d=Number(el.dataset.n);if(d>0&&p.people.length<8)p.people.push(newPerson('Personne '+(p.people.length+1)));else if(d<0&&p.people.length>1)p.people.pop();stale();commit()},
+ obdone(el){S.onboarded=true;editP=0;tab='home';if(el.dataset.gen){generate(S.week);toast('Semaine composée')}else stale();commit();window.scrollTo(0,0)},
  tab(el){tab=el.dataset.t;if(tab==='home')S.week=mondayOf(iso(new Date()));render();window.scrollTo(0,0)},
  pantry(){pantrySheet()},
  stockadd(){const k=$('#st-k').value,q=Number($('#st-q').value);if(!I[k]||!(q>0)){toast('Indique une quantité');return}S.stock[k]=q;commit();pantrySheet()},
@@ -1330,7 +1384,7 @@ const ACT={
    generate(S.week);commit();toast(k.startsWith('x:')?'Ingrédient évité, semaine recomposée':'Réglage appliqué, semaine recomposée')},
  cheap(el){const plan=curPlan();setRecipe(plan,+el.dataset.i,el.dataset.id);plan.got=[];plan.tipsDone=false;plan.tips=[];commit();toast('Plat remplacé')},
  genme(){generate(S.week);tab='week';commit();window.scrollTo(0,0);const q=curPlan();toast(q.missing&&q.missing.length?'Certains repas n’ont pas de recette compatible':q.overBudget?'Semaine composée, budget dépassé':'Semaine composée')},
- gen(){generate(S.week);commit();const p=curPlan();toast(p.missing&&p.missing.length?'Certains repas n’ont pas de recette compatible':p.overBudget?'Semaine composée, budget dépassé':'Semaine composée')},
+ gen(){if(!S.onboarded){ACT.onbstart();return}generate(S.week);commit();const p=curPlan();toast(p.missing&&p.missing.length?'Certains repas n’ont pas de recette compatible':p.overBudget?'Semaine composée, budget dépassé':'Semaine composée')},
  lock(el){const e=curPlan().entries[+el.dataset.i];e.lock=!e.lock;commit()},
  swap(el){swap(+el.dataset.i)},
  pick(el){picker(+el.dataset.i)},
@@ -1388,7 +1442,7 @@ const ACT={
    adopt(strip(prev));commit();toast('Semaine précédente copiée')},
  /* suivi */
  tpick(el){trackP=el.dataset.id;if(el.dataset.go)tab=el.dataset.go;render();window.scrollTo(0,0)},
- homegen(){generate(S.week);commit();toast('Semaine composée')},
+ homegen(){if(!S.onboarded){ACT.onbstart();return}generate(S.week);commit();toast('Semaine composée')},
  tmet(el){trackMetric=el.dataset.m;render()},
  tp(el){showTip(el)},
  tadd(){const pe=trackPerson(),d=$('#td').value,w=$('#tw').value===''?null:Number($('#tw').value),c=$('#tc').value===''?null:Number($('#tc').value);
@@ -1428,9 +1482,10 @@ const ACT={
 function onClick(ev){const el=ev.target.closest('[data-act]');if(!el||el.tagName==='INPUT')return;const f=ACT[el.dataset.act];if(f)f(el)}
 function onChange(ev){const t=ev.target,p=S.prof,pe=p.people[editP]||p.people[0];
   if(t.dataset.act==='got'){ACT.got(t);return}
-  if(t.id==='budget'){const v=Number(t.value);if(v>=10&&v<=2000){p.budget=v;stale();commit()}else{toast('Budget entre 10 et 2 000 €');render()}return}
+  if(t.id&&t.id.startsWith('obn-')){const pe=p.people[+t.id.slice(4)];if(pe)pe.name=t.value.trim().slice(0,24)||pe.name;quiet();return}
+  if(t.id==='budget'){const v=Number(t.value);if(v>=10&&v<=2000){p.budget=v;stale();if(tab==='onb'){quiet();rebuild()}else commit()}else{toast('Budget entre 10 et 2 000 €');render()}return}
   if(t.id&&t.id.startsWith('dk-')){const k=pe.dukan,m={'dk-phase':()=>k.phase=t.value,'dk-end':()=>k.attackEnd=t.value,'dk-rhythm':()=>k.rhythm=Number(t.value),'dk-first':()=>k.first=t.value,'dk-start':()=>k.cycleStart=t.value,'dk-conso':()=>k.conso=Number(t.value),'dk-ppday':()=>k.ppDay=Number(t.value)};if(m[t.id])m[t.id]();stale();commit();return}
-  if(t.id==='pname'){pe.name=t.value.trim().slice(0,24)||pe.name;commit();return}
+  if(t.id==='pname'){pe.name=t.value.trim().slice(0,24)||pe.name;quiet();if(tab!=='me')render();return}
   if(t.id==='appetite'){pe.appetite=t.value;stale();commit();return}
   if(t.id==='diet'){pe.diet=t.value;stale();commit();return}
   if(t.id==='maxTime'){p.maxTime=Number(t.value);stale();commit();return}
@@ -1455,6 +1510,7 @@ async function boot(){
   await connect();
   const firstVisit=!S;
   if(!S){S=defaults();S.savedAt=Date.now();rebuild();writeLocal()}
+  if(!S.onboarded){tab='onb';ob=0}
   const nowWeek=mondayOf(iso(new Date()));
   if(nowWeek>S.week&&!S.plans[S.week])S.week=nowWeek;
   rebuild();booted=true;render();if(!firstVisit)flush();
