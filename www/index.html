@@ -202,7 +202,7 @@ body.cooking:has(#timers:not([hidden])) .ck-top{margin-bottom:62px}
 .hero svg{width:190px;height:190px}
 .hero img.big{width:100%;height:100%;object-fit:cover;border-radius:0}
 label.btn input[hidden]{display:none}
-
+</style>
 .shell{padding-top:calc(14px + env(safe-area-inset-top,0px))}
 </style>
 </head>
@@ -464,6 +464,7 @@ const ICON={
  week:'<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
  book:'<svg viewBox="0 0 24 24"><path d="M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4z"/><path d="M5 16a4 4 0 0 1 4-4h10"/></svg>',
  cart:'<svg viewBox="0 0 24 24"><path d="M3 4h2.5l2 11h10l2-8H7"/><circle cx="9" cy="19" r="1.4"/><circle cx="17" cy="19" r="1.4"/></svg>',
+ home:'<svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v9h12v-9"/><path d="M10 19v-5h4v5"/></svg>',
  me:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>',
  track:'<svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M7 14l4-4 3 3 5-6"/></svg>',
  spark:'<svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg>'};
@@ -478,7 +479,7 @@ const newPerson=(name,o)=>({id:'p'+Date.now().toString(36)+(pidN++),name,diet:'b
 const defaults=()=>({v:2,savedAt:0,week:mondayOf(iso(new Date())),
   prof:{meals:{b:true,l:true,d:true,s:false},maxTime:60,budget:100,leftovers:true,people:[newPerson('Moi')]},
   plans:{},pantry:[],prices:{},custom:[],track:{},favs:[],rate:{},stock:{},spend:{},photos:{},cal:false});
-let S=null,RECIPES=[],BYID={},NUT=new Map(),tab='week',sync='local',recQuery='',recType='all',recOnlyOk=true,draft=null,saveT=null,writing=false,dirtyAgain=false,docRef=null,booted=false,editP=0,trackP=null,trackMetric='w',sampleFn=null,ai=null,recFav=false,recPantry=false,cook=null,wl=null,curDetail=null,assetsFn=null,_cf=null,calOff=false;
+let S=null,RECIPES=[],BYID={},NUT=new Map(),tab='home',sync='local',recQuery='',recType='all',recOnlyOk=true,draft=null,saveT=null,writing=false,dirtyAgain=false,docRef=null,booted=false,editP=0,trackP=null,trackMetric='w',sampleFn=null,ai=null,recFav=false,recPantry=false,cook=null,wl=null,curDetail=null,assetsFn=null,_cf=null,calOff=false;
 function rebuild(){_cf=null;RECIPES=[...B,...S.custom];BYID=Object.fromEntries(RECIPES.map(r=>[r.id,r]));NUT=new Map()}
 function nut(r){let n=NUT.get(r.id);if(n)return n;n={k:0,p:0,c:0,f:0};for(const[key,q]of r.items){const i=I[key];if(!i)continue;const g=i.u==='pc'?q*i.pg:q;n.k+=g*i.k/100;n.p+=g*i.p/100;n.c+=g*i.c/100;n.f+=g*i.f/100}NUT.set(r.id,n);return n}
 const P=new Set(['poulet','dinde','boeuf','jambon','saumon','cabillaud','colin','crevette','thon','sardine','oeuf','fromage_blanc','yaourt','tofu','son','citron','surimi','moule']);
@@ -772,13 +773,15 @@ function toast(t){const el=$('#toast');el.textContent=t;el.hidden=false;clearTim
 function openSheet(html){$('#pn').innerHTML=`<button class="icon-btn close" data-act="close" aria-label="Fermer">${ICON.close}</button>`+html;$('#sheet').hidden=false;$('#pn').querySelector('.close').focus()}
 function closeSheet(){$('#sheet').hidden=true;$('#pn').innerHTML='';ai=ai&&ai.busy?ai:null}
 const TITLES={recipes:'Recettes',me:'Profils',track:'Suivi'};
+const profBtn=`<button class="icon-btn" data-act="tab" data-t="me" aria-label="Profils et réglages" style="margin-left:auto">${ICON.me}</button>`;
 function render(){
   const range=`${parse(S.week).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})} – ${parse(addDays(S.week,6)).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}`;
   $('#weeknav').innerHTML=tab==='week'||tab==='shop'
-    ?`<button class="icon-btn" data-act="wk" data-n="-1" aria-label="Semaine précédente">${ICON.prev}</button><h1>${esc(range)}</h1><button class="icon-btn" data-act="wk" data-n="1" aria-label="Semaine suivante">${ICON.next}</button>`
-    :`<h1>${TITLES[tab]}</h1>`;
-  $('#tabs').innerHTML=[['me','Profils','me'],['week','Semaine','week'],['recipes','Recettes','book'],['shop','Courses','cart'],['track','Suivi','track']].map(([k,l,ic])=>`<button class="tab" data-act="tab" data-t="${k}" ${tab===k?'aria-current="page"':''}>${ICON[ic]}<span>${l}</span></button>`).join('');
-  $('#view').innerHTML={week:viewWeek,recipes:viewRecipes,shop:viewShop,me:viewMe,track:viewTrack}[tab]();
+    ?`<button class="icon-btn" data-act="wk" data-n="-1" aria-label="Semaine précédente">${ICON.prev}</button><h1>${esc(range)}</h1><button class="icon-btn" data-act="wk" data-n="1" aria-label="Semaine suivante">${ICON.next}</button>${profBtn}`
+    :tab==='home'?`<h1 style="text-transform:capitalize">${esc(parse(iso(new Date())).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}))}</h1>${profBtn}`
+    :`<h1>${TITLES[tab]}</h1>${tab==='me'?'':profBtn}`;
+  $('#tabs').innerHTML=[['home','Accueil','home'],['week','Semaine','week'],['recipes','Recettes','book'],['shop','Courses','cart'],['track','Suivi','track']].map(([k,l,ic])=>`<button class="tab" data-act="tab" data-t="${k}" ${tab===k?'aria-current="page"':''}>${ICON[ic]}<span>${l}</span></button>`).join('');
+  $('#view').innerHTML={home:viewHome,week:viewWeek,recipes:viewRecipes,shop:viewShop,me:viewMe,track:viewTrack}[tab]();
   if(tab==='recipes')paintRecipeList();
   if(tab==='me')paintSync();
 }
@@ -850,6 +853,27 @@ function viewWeek(){
     h+=`</section>`;
   }
   return h+`</div></div>`;
+}
+
+function viewHome(){
+  const today=iso(new Date()),wk=mondayOf(today),p=S.prof,plan=S.plans[wk],di=dayDiff(today,wk);
+  let h=`<div class="stack">`;
+  if(!plan||!plan.entries.length){
+    return h+`<div class="card empty"><div class="banner m" aria-hidden="true">🥗🍳🍲</div><h2>Que mange-t-on cette semaine ?</h2><p class="muted">Compose tes menus : l’appli s’occupe des repas, des courses et du budget.</p><button class="btn primary" data-act="homegen">Composer la semaine</button>${S.favs.length?`<button class="btn" data-act="favs">Reprendre une semaine gardée (${S.favs.length})</button>`:''}<button class="btn" data-act="tab" data-t="me">Régler mon profil</button></div></div>`;
+  }
+  const cost=planCost(plan),b=p.budget,ratio=cost/b,cls=ratio>1?'bad':ratio>.9?'warn':'';
+  const idx=(d,m)=>plan.entries.findIndex(e=>e.d===d&&e.m===m);
+  const dayEntries=d=>plan.entries.map((e,i)=>({e,i})).filter(x=>x.e.d===d).sort((a,b)=>SLOT_ORDER.indexOf(a.e.m)-SLOT_ORDER.indexOf(b.e.m));
+  const mine=dayEntries(di);
+  h+=`<section class="card day today"><h3><span>Aujourd’hui</span><span class="row" style="gap:6px;justify-content:flex-end">${dayBadge(di)}</span></h3>${mine.length?mine.map(x=>slotHtml(x.e,x.i)).join(''):'<div class="slot"><span class="muted">Rien de prévu aujourd’hui.</span></div>'}</section>`;
+  const tom=di<6?dayEntries(di+1).filter(x=>x.e.r&&BYID[x.e.r]):[];
+  if(tom.length)h+=`<section class="card stack" style="gap:6px"><span class="eyebrow">Demain</span>${tom.map(x=>`<div class="small"><b>${SLOTS[x.e.m]}</b> · ${esc(BYID[x.e.r].name)}${x.e.lo?' <span class="muted">(reste de la veille)</span>':''}</div>`).join('')}</section>`;
+  const gs=groceries(plan).filter(g=>!g.home),got=new Set(plan.got||[]),left=gs.filter(g=>!got.has(g.k)).length;
+  h+=`<section class="card stack" style="gap:10px"><div class="row between"><div><span class="eyebrow">Courses de la semaine</span><div class="big" style="font-size:30px">${eur(cost)}</div></div><div class="small muted" style="text-align:right">sur ${eur(b)}<br>${left?`${left} article${left>1?'s':''} à prendre`:'tout est pris ✓'}</div></div><div class="meter ${cls}" role="img" aria-label="${Math.round(ratio*100)} % du budget"><i style="width:${Math.min(100,ratio*100)}%"></i></div>
+  <div class="row"><button class="btn small" data-act="tab" data-t="shop">Voir la liste</button><button class="btn small" data-act="prep">Préparer d’avance</button><button class="btn small" data-act="tab" data-t="week">Toute la semaine</button></div></section>`;
+  const dk=p.people.filter(x=>x.diet==='dukan');
+  if(dk.length)h+=dk.map(pe=>`<section class="card stack" style="gap:6px;border-color:var(--accent)"><span class="eyebrow">Dukan · ${esc(pe.name)}</span><div><b>${esc(dukanToday(pe))}</b></div><button class="btn small" data-act="tpick" data-id="${pe.id}" data-go="track" style="align-self:flex-start">Noter une pesée</button></section>`).join('');
+  return h+`</div>`;
 }
 function recRow(r,attr){const n=nut(r),tl={b:'Petit-déj.',m:'Plat',s:'Collation'}[r.type],pc=recPantry?pantryCover(r):0;
   return`<button class="rcard" ${attr}><span class="rpic ${r.type}" aria-hidden="true">${recPic(r)}</span><span class="rname">${esc(r.name)}${S.rate[r.id]===1?' 👍':S.rate[r.id]===-1?' 👎':''}</span><span class="pill ${r.custom?'hi':''}">${r.ai?'Claude':r.custom?'Perso':tl}</span><span class="rmeta">${r.time} min · ${nf(n.k)} kcal · ${nf(n.p)} g prot. · ${nf(recCost(r),2)} €/portion${recPantry?` · ${pc}/${r.items.length} au placard`:''}</span></button>`}
@@ -1276,7 +1300,7 @@ function favsSheet(){
     return`<div class="card stack" style="gap:8px"><div class="row between"><b>${esc(f.name)}</b><span class="small muted num">≈ ${eur(c)}</span></div><div class="row"><button class="btn small primary" data-act="favuse" data-id="${f.id}">Reprendre</button><button class="btn small danger" data-act="favdel" data-id="${f.id}">Supprimer</button></div></div>`}).join('')}</div>`);
 }
 const ACT={
- tab(el){tab=el.dataset.t;render();window.scrollTo(0,0)},
+ tab(el){tab=el.dataset.t;if(tab==='home')S.week=mondayOf(iso(new Date()));render();window.scrollTo(0,0)},
  pantry(){pantrySheet()},
  stockadd(){const k=$('#st-k').value,q=Number($('#st-q').value);if(!I[k]||!(q>0)){toast('Indique une quantité');return}S.stock[k]=q;commit();pantrySheet()},
  stockdel(el){delete S.stock[el.dataset.k];commit();pantrySheet()},
@@ -1363,7 +1387,8 @@ const ACT={
    const cur=curPlan();if(cur&&cur.entries.length&&!arm(el,'Confirmer le remplacement'))return;
    adopt(strip(prev));commit();toast('Semaine précédente copiée')},
  /* suivi */
- tpick(el){trackP=el.dataset.id;render()},
+ tpick(el){trackP=el.dataset.id;if(el.dataset.go)tab=el.dataset.go;render();window.scrollTo(0,0)},
+ homegen(){generate(S.week);commit();toast('Semaine composée')},
  tmet(el){trackMetric=el.dataset.m;render()},
  tp(el){showTip(el)},
  tadd(){const pe=trackPerson(),d=$('#td').value,w=$('#tw').value===''?null:Number($('#tw').value),c=$('#tc').value===''?null:Number($('#tc').value);
@@ -1434,7 +1459,13 @@ async function boot(){
   if(nowWeek>S.week&&!S.plans[S.week])S.week=nowWeek;
   rebuild();booted=true;render();if(!firstVisit)flush();
 }
-if(!globalThis.__TEST__)boot();
+function nativeBars(){
+  try{const sb=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.StatusBar;if(!sb)return;
+    const dark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+    sb.setOverlaysWebView({overlay:false}).catch(()=>{});sb.setBackgroundColor({color:dark?'#0E1512':'#F2F5F1'}).catch(()=>{});sb.setStyle({style:dark?'LIGHT':'DARK'}).catch(()=>{});
+  }catch{}
+}
+if(!globalThis.__TEST__){nativeBars();boot()}
 </script>
 
 </body>
