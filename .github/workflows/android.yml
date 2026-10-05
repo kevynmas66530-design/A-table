@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: apk
+  cancel-in-progress: true
+
 jobs:
   apk:
     runs-on: ubuntu-24.04
