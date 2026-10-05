@@ -898,6 +898,9 @@ function viewWelcome(){
   <div class="wpanel"><h1 class="wtitle">À table !</h1><p class="wtext">Tes menus de la semaine, la liste de courses et le budget, prêts en deux minutes.</p><button class="btn primary wbtn" data-act="wstart">Commencer</button><p class="small muted" style="margin:0;text-align:center">Quelques questions pour s’adapter à toi. Tu pourras tout modifier ensuite.</p></div></div>`;
 }
 function obTotal(){return S.prof.people.length+4}
+const APDESC={light:'portions des recettes',normal:'un peu plus',hearty:'beaucoup plus'};
+function baseKcalDay(pe){const pl=curPlan();if(!pl||!pl.entries.length)return 0;let t=0;const days=new Set();for(const e of pl.entries){const rid=e.alt&&pe.id in e.alt?e.alt[pe.id]:e.r;if(!rid||!BYID[rid])continue;t+=nut(BYID[rid]).k;days.add(e.d)}return days.size?t/days.size:0}
+function appOpts(pe){const b=baseKcalDay(pe);return Object.entries(APPETITE).map(([k,v])=>`<option value="${k}" ${pe.appetite===k?'selected':''}>${v.l} · ${b?'≈ '+nf(Math.round(b*v.m/10)*10)+' kcal par jour':APDESC[k]}</option>`).join('')}
 function viewOnb(){
   const p=S.prof,n=p.people.length,total=obTotal();if(ob>=total)ob=total-1;
   const pct=Math.round((ob+1)/total*100),opt=(v,l,c)=>`<option value="${v}" ${String(v)===String(c)?'selected':''}>${l}</option>`;
@@ -913,8 +916,8 @@ function viewOnb(){
     h+=`<section class="card stack"><h2 class="ob-h">${n>1?'Pour '+esc(pe.name):'Ton alimentation'}</h2>
     <label class="f">Régime<select id="diet">${Object.entries(DIETS).map(([k,l])=>opt(k,l,pe.diet)).join('')}</select></label>
     ${pe.diet==='dukan'?dukanUI(pe):''}
-    <label class="f">Appétit<select id="appetite">${Object.entries(APPETITE).map(([k,v])=>opt(k,v.l+(v.m>1?' (+'+Math.round((v.m-1)*100)+' %)':' (portions de base)'),pe.appetite)).join('')}</select></label>
-    <p class="small muted">Les portions de base sont plutôt petites : choisis « Normal » ou « Copieux » si tu manges à ta faim.</p>
+    <label class="f">Appétit<select id="appetite">${appOpts(pe)}</select></label>
+    <p class="small muted">Léger = les portions des recettes (assez petites). Normal ajoute un quart, Copieux la moitié. Les calories par jour sont une estimation d’après tes menus de la semaine.</p>
     <div class="grid2"><label class="check"><input type="checkbox" id="gf" ${pe.gf?'checked':''}>Sans gluten</label><label class="check"><input type="checkbox" id="lf" ${pe.lf?'checked':''}>Sans lactose</label></div>
     <span class="eyebrow">Aliments à éviter</span><div class="chips">${gr.map(([l,f])=>`<button class="chip x" data-act="exg" data-f="${f}" aria-pressed="${groupOn(f)}">${l}</button>`).join('')}</div>
     <p class="small muted">Tu pourras éviter des ingrédients précis plus tard, dans Réglages.</p></section>`;
@@ -1020,8 +1023,8 @@ function viewMe(){
   <section class="card stack"><span class="eyebrow">Personnes · une seule liste de courses</span>
   <div class="chips" role="group" aria-label="Personnes">${p.people.map((x,i)=>`<button class="chip" data-act="editp" data-i="${i}" aria-pressed="${i===editP}">${esc(x.name)}</button>`).join('')}${n<8?`<button class="chip" data-act="addp">+ Personne</button>`:''}</div>
   <div class="grid2"><label class="f">Prénom<input type="text" id="pname" maxlength="24" value="${esc(pe.name)}"></label>
-  <label class="f">Appétit<select id="appetite">${Object.entries(APPETITE).map(([k,v])=>`<option value="${k}" ${pe.appetite===k?'selected':''}>${v.l}${v.m>1?' (+'+Math.round((v.m-1)*100)+' %)':' (portions de base)'}</option>`).join('')}</select></label></div>
-  <p class="small muted">L’appétit ajuste les quantités et le prix des courses. Les portions de base sont plutôt petites : passe en « Normal » ou « Copieux » si tu manges à ta faim.</p>
+  <label class="f">Appétit<select id="appetite">${appOpts(pe)}</select></label></div>
+  <p class="small muted">L’appétit ajuste les quantités et le prix des courses. Léger = les portions des recettes (assez petites), Normal ajoute un quart, Copieux la moitié. Les calories par jour sont une estimation d’après tes menus de la semaine.</p>
   <label class="f">Alimentation<select id="diet">${Object.entries(DIETS).map(([k,l])=>`<option value="${k}" ${pe.diet===k?'selected':''}>${l}</option>`).join('')}</select></label>
   ${pe.diet==='dukan'?dukanUI(pe):''}
   <div class="grid2"><label class="check"><input type="checkbox" id="gf" ${pe.gf?'checked':''}>Sans gluten</label><label class="check"><input type="checkbox" id="lf" ${pe.lf?'checked':''}>Sans lactose</label></div>
